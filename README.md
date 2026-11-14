@@ -60,7 +60,7 @@ The laboratory exercises follow the university's official Hands-on Exercises syl
 | **CAT 12** | **Week 12: STM32 Cortex-M4 GPIO & UI** | • [CAT 12 Summary](./STM32/CAT12/README.md)<br>• [TASK 12A: Nucleo Onboard LED Flasher](./STM32/CAT12/TASK12A/README.md)<br>• [TASK 12B: B1 User Push-Button Polling](./STM32/CAT12/TASK12B/README.md)<br>• [TASK 12C: Multi-Pattern State-Machine LED Controller](./STM32/CAT12/TASK12C/README.md) | STM32F410RB, PA5 User LED, PC13 Blue Push Button, state machine |
 | **CAT 13** | **Week 13: Sensor Interfacing (BME280 I2C)** | • [CAT 13 Summary](./STM32/CAT13/README.md)<br>• [TASK 13C: BME280 I2C Sensor & HTTP Server](./STM32/CAT13/TASK13C/README.md) | I2C1 (PB6/PB7 @ 100 kHz), Bosch BME280 API, 64-bit integer compensation, HTTP JSON |
 | **CAT 14** | **Week 14: Sensor MQTT with Node-RED** | • [CAT 14 Summary](./STM32/CAT14/README.md)<br>• [TASK 14: Live Sensor Cloud Telemetry](./STM32/CAT14/TASK14/README.md) | I2C1 + USART1 (ESPLib), MQTT broker (`snu/iot/bme280`), Node-RED |
-| **CAT 15** | **Week 15: Capstone Project Submission** | • [CAT 15 Summary](./STM32/CAT15/README.md)<br>• [TASK 15: Environmental Recommendation Engine](./STM32/CAT15/TASK15/README.md) | STM32F401RE, BME280, ESP8266, Node-RED Industrial HVAC Advisory |
+| **CAT 15** | **Week 15: Capstone Project Submission** | • [CAT 15 Summary](./STM32/CAT15/README.md)<br>• [TASK 15: Campus Weather & Cricket Decision Engine](./STM32/CAT15/TASK15/README.md) | STM32F401RE, BME280, ESP8266, Node-RED Cricket Match Decision Engine |
 
 ---
 
@@ -130,7 +130,7 @@ The laboratory exercises follow the university's official Hands-on Exercises syl
     │   └── TASK14/  (circuit.png, README.md, Core/, Drivers/, MDK-ARM/, i2c.ioc, ESPLib, bme280)
     └── CAT15/
         ├── README.md
-        └── TASK15/  (circuit.png, README.md, Core/, Drivers/, MDK-ARM/, FINAL_PROJECT_1.ioc, flows-recengine.json)
+        └── TASK15/  (circuit.png, README.md, Core/, Drivers/, MDK-ARM/, IOT_project.ioc, weather_flow_dashboard2.json, Dashboard.jpeg, node-red.jpeg)
 ```
 
 ---

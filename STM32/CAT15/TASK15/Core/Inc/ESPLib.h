@@ -101,6 +101,4 @@ void MQTTDataHandler(char *mqttTopic, char *mqttMsg);
 void MQTTTimer(void);
 
 
-void ESP8266_UART_IRQHandler(void);
-
 #endif /* INC_ESPLIB_H_ */

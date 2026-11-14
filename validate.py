@@ -64,7 +64,7 @@ TASKS_STM32 = [
     ("STM32/CAT12/TASK12C", STM32_COMMON),
     ("STM32/CAT13/TASK13C", STM32_COMMON),
     ("STM32/CAT14/TASK14", STM32_COMMON),
-    ("STM32/CAT15/TASK15", STM32_COMMON + ["flows-recengine.json"]),
+    ("STM32/CAT15/TASK15", STM32_COMMON + ["weather_flow_dashboard2.json", "Dashboard.jpeg", "node-red.jpeg"]),
 ]
 
 CAT_SUMMARIES = [

@@ -1,4 +1,4 @@
-	/* USER CODE BEGIN Header */
+/* USER CODE BEGIN Header */
 /**
   ******************************************************************************
   * @file           : main.c
@@ -20,10 +20,13 @@
 #include "main.h"
 #include "bme280.h"
 #include "ESPLib.h"
+#include <string.h>
+#include <stdio.h>
+#include <stdint.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,165 +48,209 @@
 I2C_HandleTypeDef hi2c1;
 
 UART_HandleTypeDef huart1;
-UART_HandleTypeDef huart6;
+UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-// Assumes I2C1 is configured via CubeMX
-struct bme280_dev dev;
-// extern I2C_HandleTypeDef hi2c1;
-uint8_t dev_addr = BME280_I2C_ADDR_PRIM;
-struct bme280_settings settings;
+struct bme280_dev bme280;
 struct bme280_data sensor_data;
+struct bme280_settings settings;
+MQTT_InitTypeDef_t mqttConfig;
 
+char mqttMessage[100];
+char mqttTopic[] = "college/weather/bme280";
+
+uint8_t bme280_address;
+int8_t rslt;
+
+char msg[150];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_I2C1_Init(void);
+static void MX_USART2_UART_Init(void);
 static void MX_USART1_UART_Init(void);
-static void MX_USART6_UART_Init(void);
 /* USER CODE BEGIN PFP */
-int8_t BME280_Config(void); 
+static void BME280_Init(void);
+static void BME280_ReadData(void);
+void Terminal_Print(char *message);
+static BME280_INTF_RET_TYPE BME280_I2C_Read(
+    uint8_t reg_addr,
+    uint8_t *reg_data,
+    uint32_t len,
+    void *intf_ptr
+);
+
+static BME280_INTF_RET_TYPE BME280_I2C_Write(
+    uint8_t reg_addr,
+    const uint8_t *reg_data,
+    uint32_t len,
+    void *intf_ptr
+);
+
+static void BME280_Delay(uint32_t period, void *intf_ptr);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-int8_t user_i2c_read(uint8_t reg_addr,
-                     uint8_t *reg_data,
-                     uint32_t len,
-                     void *intf_ptr)
+		static BME280_INTF_RET_TYPE BME280_I2C_Read(
+    uint8_t reg_addr,
+    uint8_t *reg_data,
+    uint32_t len,
+    void *intf_ptr)
 {
-    uint8_t sensor_address = *(uint8_t *)intf_ptr;
-    HAL_StatusTypeDef status;
-    status = HAL_I2C_Mem_Read(&hi2c1,
-                              sensor_address << 1,
-                              reg_addr,
-                              I2C_MEMADD_SIZE_8BIT,
-                              reg_data,
-                              len,
-                              HAL_MAX_DELAY);
-        if (status == HAL_OK)
+    uint8_t address = *(uint8_t *)intf_ptr;
+
+    if (HAL_I2C_Mem_Read(
+        &hi2c1,
+        address << 1,
+        reg_addr,
+        I2C_MEMADD_SIZE_8BIT,
+        reg_data,
+        (uint16_t)len,
+        100) == HAL_OK)
     {
-        return BME280_OK;
+        return BME280_INTF_RET_SUCCESS;
     }
-    else
-    {
-        return BME280_E_COMM_FAIL;
-    }
+
+    return BME280_E_COMM_FAIL;
 }
-int8_t user_i2c_write(uint8_t reg_addr,
-                      const uint8_t *reg_data,
-                      uint32_t len,
-                      void *intf_ptr)
+
+
+static BME280_INTF_RET_TYPE BME280_I2C_Write(
+    uint8_t reg_addr,
+    const uint8_t *reg_data,
+    uint32_t len,
+    void *intf_ptr)
 {
-    uint8_t sensor_address = *(uint8_t *)intf_ptr;
+    uint8_t address = *(uint8_t *)intf_ptr;
 
-    HAL_StatusTypeDef status;
-
-    status = HAL_I2C_Mem_Write(&hi2c1,
-                               sensor_address << 1,
-                               reg_addr,
-                               I2C_MEMADD_SIZE_8BIT,
-                               (uint8_t *)reg_data,
-                               len,
-                               HAL_MAX_DELAY);
-
-    if (status == HAL_OK)
+    if (HAL_I2C_Mem_Write(
+        &hi2c1,
+        address << 1,
+        reg_addr,
+        I2C_MEMADD_SIZE_8BIT,
+        (uint8_t *)reg_data,
+        (uint16_t)len,
+        100) == HAL_OK)
     {
-        return BME280_OK;
+        return BME280_INTF_RET_SUCCESS;
     }
-    else
-    {
-        return BME280_E_COMM_FAIL;
-    }
+
+    return BME280_E_COMM_FAIL;
 }
-void user_delay_us(uint32_t period, void *intf_ptr)
-{
-    uint32_t start = DWT->CYCCNT;
-    uint32_t cycles = period * (HAL_RCC_GetHCLKFreq() / 1000000U);
 
-    while ((DWT->CYCCNT - start) < cycles);
+
+static void BME280_Delay(uint32_t period, void *intf_ptr)
+{
+    (void)intf_ptr;
+
+    HAL_Delay((period + 999U) / 1000U);
 }
-int8_t BME280_Config(void)
+
+static void BME280_Init(void)
 {
-    int8_t rslt;
-    uint8_t settings_sel;
+    memset(&bme280, 0, sizeof(bme280));
 
-    // Configure Bosch interface
-    dev.intf = BME280_I2C_INTF;
-    dev.intf_ptr = &dev_addr;
-    dev.read = user_i2c_read;
-    dev.write = user_i2c_write;
-    dev.delay_us = user_delay_us;
+    /* Configure I2C interface */
 
-    // Initialize sensor
-    rslt = bme280_init(&dev);
+    bme280.intf_ptr = &bme280_address;
+    bme280.intf = BME280_I2C_INTF;
+
+    bme280.read = BME280_I2C_Read;
+    bme280.write = BME280_I2C_Write;
+    bme280.delay_us = BME280_Delay;
+
+    /* Initialize sensor */
+
+    rslt = bme280_init(&bme280);
 
     if (rslt != BME280_OK)
-        return rslt;
+    {
+        Terminal_Print("BME280 initialization failed!\r\n");
+        Error_Handler();
+    }
 
-    // Oversampling
-    settings.osr_t = BME280_OVERSAMPLING_2X;
-    settings.osr_p = BME280_OVERSAMPLING_16X;
+    Terminal_Print("BME280 initialized successfully!\r\n");
+
+    /* Configure sensor settings */
+
+    settings.osr_t = BME280_OVERSAMPLING_1X;
+    settings.osr_p = BME280_OVERSAMPLING_1X;
     settings.osr_h = BME280_OVERSAMPLING_1X;
 
-    // Filtering and standby
-    settings.filter = BME280_FILTER_COEFF_16;
+    settings.filter = BME280_FILTER_COEFF_OFF;
     settings.standby_time = BME280_STANDBY_TIME_1000_MS;
 
-    // Select settings
-    settings_sel = BME280_SEL_OSR_TEMP |
-                   BME280_SEL_OSR_PRESS |
-                   BME280_SEL_OSR_HUM |
-                   BME280_SEL_FILTER |
-                   BME280_SEL_STANDBY;
+    rslt = bme280_set_sensor_settings(
+        BME280_SEL_OSR_PRESS |
+        BME280_SEL_OSR_TEMP |
+        BME280_SEL_OSR_HUM |
+        BME280_SEL_FILTER |
+        BME280_SEL_STANDBY,
+        &settings,
+        &bme280
+    );
 
-    // Apply settings
-rslt = bme280_set_sensor_settings(settings_sel, &settings, &dev);
+    if (rslt != BME280_OK)
+    {
+        Terminal_Print("Sensor settings error!\r\n");
+        Error_Handler();
+    }
 
-if (rslt != BME280_OK)
-{
-    return rslt;
+    /* Set normal operating mode */
+
+    rslt = bme280_set_sensor_mode(
+        BME280_POWERMODE_NORMAL,
+        &bme280
+    );
+
+    if (rslt != BME280_OK)
+    {
+        Terminal_Print("Sensor mode error!\r\n");
+        Error_Handler();
+    }
+
+    Terminal_Print("BME280 ready to measure!\r\n");
 }
 
-rslt = bme280_set_sensor_mode(BME280_POWERMODE_NORMAL, &dev);
-
-if (rslt != BME280_OK)
+static void BME280_ReadData(void)
 {
-    return rslt;
-}
-return BME280_OK;
-}
-int8_t BME280_Read(void)
-{
-    int8_t rslt;
-
     rslt = bme280_get_sensor_data(
         BME280_ALL,
         &sensor_data,
-        &dev
+        &bme280
     );
 
-    return rslt;
-}
-void BME280_CreateJSON(char *payload, size_t size)
-{
-    snprintf(payload, size,
-             "{\"temperature\":%.2f,"
-             "\"pressure\":%.2f,"
-             "\"humidity\":%.2f}",
-             sensor_data.temperature,
-             sensor_data.pressure / 100.0,
-             sensor_data.humidity);
-}
-void BME280_Publish(void)
-{
-    char payload[128];
+    if (rslt == BME280_OK)
+    {
+        sprintf(
+            msg,
+            "\r\n"
+            "-----------------------------\r\n"
+            "Temperature : %.2f C\r\n"
+            "Pressure    : %.2f hPa\r\n"
+            "Humidity    : %.2f %%RH\r\n"
+            "-----------------------------\r\n",
+            sensor_data.temperature,
+            sensor_data.pressure / 100.0,
+            sensor_data.humidity
+        );
 
-    BME280_CreateJSON(payload, sizeof(payload));
-
-    MQTT_publishTopic("snu/iot/bme280", payload, QoS0);
+        Terminal_Print(msg);
+    }
+    else
+    {
+        Terminal_Print("Sensor reading failed!\r\n");
+    }
+}
+void Terminal_Print(char *message)
+{
+    HAL_UART_Transmit(&huart2,
+                      (uint8_t *)message,
+                      strlen(message),
+                      HAL_MAX_DELAY);
 }
 /* USER CODE END 0 */
 
@@ -224,9 +271,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
-  DWT->CYCCNT = 0;
-  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -239,75 +284,120 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_I2C1_Init();
+  MX_USART2_UART_Init();
   MX_USART1_UART_Init();
-  MX_USART6_UART_Init();
   /* USER CODE BEGIN 2 */
-  HAL_NVIC_SetPriority(USART1_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(USART1_IRQn);
 
-int8_t rslt = BME280_Config();
+char msg[100];
+uint8_t found = 0;
 
-if (rslt == BME280_OK)
+Terminal_Print("\r\n");
+Terminal_Print("==============================\r\n");
+Terminal_Print("   STM32 BME280 MONITOR\r\n");
+Terminal_Print("==============================\r\n");
+
+/* Detect BME280 address */
+
+if (HAL_I2C_IsDeviceReady(
+    &hi2c1,
+    0x76 << 1,
+    3,
+    100) == HAL_OK)
 {
-    // BME280 initialization successful
+    bme280_address = 0x76;
+}
+else if (HAL_I2C_IsDeviceReady(
+    &hi2c1,
+    0x77 << 1,
+    3,
+    100) == HAL_OK)
+{
+    bme280_address = 0x77;
 }
 else
 {
+    Terminal_Print("BME280 NOT DETECTED!\r\n");
     Error_Handler();
 }
-  // 1. Initialize the Wi-Fi module on USART1
-char rx[64];
 
-// --- ESP debug: runs first, forever, until you see OK ---
-while (1)
+/* Initialize sensor */
+
+BME280_Init();
+
+HAL_Delay(1100);
+/* Initialize ESP8266 using USART1 */
+
+funcState_t espStatus;
+
+espStatus = ESP8266_Init(StationMode, huart1);
+
+if (espStatus == funcOk)
 {
-    HAL_UART_Transmit(&huart1, (uint8_t*)"AT\r\n", 4, 100);
+    Terminal_Print("ESP8266 initialized successfully!\r\n");
+}
+else
+{
+    Terminal_Print("ESP8266 initialization failed!\r\n");
+}
+/* Connect ESP8266 to Wi-Fi */
 
-    uint16_t n = 0;
-    while (n < sizeof(rx) - 1 &&
-           HAL_UART_Receive(&huart1, (uint8_t*)&rx[n], 1, 300) == HAL_OK)
-        n++;
-    rx[n] = '\0';
+if (ESP8266_wifiConnect("SNUC", "snu12345") == funcOk)
+{
+    Terminal_Print("Wi-Fi connected successfully!\r\n");
+}
+else
+{
+    Terminal_Print("Wi-Fi connection failed!\r\n");
+}
+/* Connect to MQTT broker */
 
-    // print to ST-Link virtual COM (enable USART2 in CubeMX)
-    // HAL_UART_Transmit(&huart2, (uint8_t*)rx, n, 100);
-
-    if (strstr(rx, "OK")) break;   // ESP alive, continue to real init
-    HAL_Delay(1000);
+if (ESP8266_portConnect("TCP", "broker.emqx.io", "1883") == funcOk)
+{
+    Terminal_Print("MQTT broker TCP connection successful!\r\n");
+}
+else
+{
+    Terminal_Print("MQTT broker connection failed!\r\n");
 }
 
-ESP8266_Init(StationMode, huart1);
-  // 2. Connect to your local Wi-Fi network (Replace with your Router SSID and Password)
-  ESP8266_wifiConnect("SNUC", "snu12345");
-  // 3. Connect to your MQTT Broker (Replace with your Broker's IP Address)
-  // 1883 is the standard unencrypted MQTT port
-  ESP8266_portConnect("TCP", "broker.emqx.io", "1883");
-  MQTT_InitTypeDef_t mqttSetting = {0};
-  mqttSetting.keepAlive = 500;
-  mqttSetting.connectFlag = CleanSession;
-  mqttSetting.clientID = "STM32_Publisher";
-  // 5. Handshake with the MQTT broker
-  MQTT_connectBroker(&mqttSetting);
-  
+/* Configure MQTT client */
+
+MQTT_InitTypeDef_t mqttConfig;
+
+mqttConfig.clientID = "STM32_BME280_Device01";
+mqttConfig.username = NULL;
+mqttConfig.password = NULL;
+mqttConfig.keepAlive = 60;
+mqttConfig.connectFlag = CleanSession;
+
+/* Send MQTT CONNECT packet */
+
+MQTT_connectBroker(&mqttConfig);
+
+HAL_Delay(1000);
+
+Terminal_Print("MQTT CONNECT packet sent!\r\n");
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+ while (1)
+{
+    BME280_ReadData();
 
-  /* USER CODE BEGIN WHILE */
+    sprintf(mqttMessage,
+            "{\"temperature\":%.2f,\"pressure\":%.2f,\"humidity\":%.2f}",
+            sensor_data.temperature,
+            sensor_data.pressure / 100.0,
+            sensor_data.humidity);
 
-  while (1)
-  {
-        if (BME280_Read() == BME280_OK)
-          {
-              BME280_Publish();
-          }
+    MQTT_publishTopic(mqttTopic, mqttMessage, QoS0);
 
-    HAL_Delay(1000);
+    Terminal_Print("MQTT publish function called!\r\n");
 
-  }
-
-  /* USER CODE END WHILE */
+    HAL_Delay(5000);
+}
+  /* USER CODE END 3 */
 }
 
 /**
@@ -327,11 +417,12 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-  RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = 4;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLM = 8;
   RCC_OscInitStruct.PLL.PLLN = 84;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 4;
@@ -423,35 +514,35 @@ static void MX_USART1_UART_Init(void)
 }
 
 /**
-  * @brief USART6 Initialization Function
+  * @brief USART2 Initialization Function
   * @param None
   * @retval None
   */
-static void MX_USART6_UART_Init(void)
+static void MX_USART2_UART_Init(void)
 {
 
-  /* USER CODE BEGIN USART6_Init 0 */
+  /* USER CODE BEGIN USART2_Init 0 */
 
-  /* USER CODE END USART6_Init 0 */
+  /* USER CODE END USART2_Init 0 */
 
-  /* USER CODE BEGIN USART6_Init 1 */
+  /* USER CODE BEGIN USART2_Init 1 */
 
-  /* USER CODE END USART6_Init 1 */
-  huart6.Instance = USART6;
-  huart6.Init.BaudRate = 115200;
-  huart6.Init.WordLength = UART_WORDLENGTH_8B;
-  huart6.Init.StopBits = UART_STOPBITS_1;
-  huart6.Init.Parity = UART_PARITY_NONE;
-  huart6.Init.Mode = UART_MODE_TX_RX;
-  huart6.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart6.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart6) != HAL_OK)
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN USART6_Init 2 */
+  /* USER CODE BEGIN USART2_Init 2 */
 
-  /* USER CODE END USART6_Init 2 */
+  /* USER CODE END USART2_Init 2 */
 
 }
 
@@ -468,7 +559,6 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOH_CLK_ENABLE();
-  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 

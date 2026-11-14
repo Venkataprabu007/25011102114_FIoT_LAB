@@ -29,11 +29,6 @@ char mqttPacket[BUFFERSIZE];
 
 static UART_HandleTypeDef esp_uart;
 
-void ESP8266_UART_IRQHandler(void)
-{
-    HAL_UART_IRQHandler(&esp_uart);
-}
-
 /*Responses and Commands*/
 char *OK = "OK\r\n";
 char *WIFIDISCONNECT = "OK\r\nWIFI DISCONNECT\r\n";

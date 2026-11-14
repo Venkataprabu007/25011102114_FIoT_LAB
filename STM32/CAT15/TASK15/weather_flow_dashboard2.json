@@ -1,0 +1,845 @@
+[
+  {
+    "id": "tab_bme280_owm_d2",
+    "type": "tab",
+    "label": "BME280 & Chennai Weather",
+    "disabled": false,
+    "info": "Dual Weather Station: STM32 BME280 MQTT + OpenWeatherMap Chennai API using Dashboard 2.0"
+  },
+  {
+    "id": "mqtt_broker_emqx",
+    "type": "mqtt-broker",
+    "name": "EMQX Public Broker",
+    "broker": "broker.emqx.io",
+    "port": "1883",
+    "clientid": "",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "autoUnsubscribe": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthPayload": "",
+    "closeTopic": "",
+    "closeQos": "0",
+    "closePayload": "",
+    "willTopic": "",
+    "willQos": "0",
+    "willPayload": ""
+  },
+  {
+    "id": "ui_base_dashboard",
+    "type": "ui-base",
+    "name": "Weather Dashboard",
+    "path": "/dashboard",
+    "includeClientData": true,
+    "acceptsClientConfig": [
+      "ui-notification",
+      "ui-control"
+    ]
+  },
+  {
+    "id": "ui_page_weather",
+    "type": "ui-page",
+    "name": "Weather Station",
+    "ui": "ui_base_dashboard",
+    "path": "/weather",
+    "icon": "weather-partly-cloudy",
+    "layout": "grid",
+    "theme": "theme_dark",
+    "order": 1,
+    "className": ""
+  },
+  {
+    "id": "theme_dark",
+    "type": "ui-theme",
+    "name": "Dark Theme",
+    "colors": {
+      "surface": "#1e1e1e",
+      "primary": "#009688",
+      "bgPage": "#121212",
+      "groupBg": "#252525",
+      "groupOutline": "#3a3a3a"
+    }
+  },
+  {
+    "id": "ui_grp_sensor",
+    "type": "ui-group",
+    "name": "BME280 Sensor (STM32 MQTT)",
+    "page": "ui_page_weather",
+    "width": "6",
+    "height": "1",
+    "order": 1,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "ui_grp_owm",
+    "type": "ui-group",
+    "name": "OpenWeatherMap (Chennai API)",
+    "page": "ui_page_weather",
+    "width": "6",
+    "height": "1",
+    "order": 2,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "mqtt_in_bme280",
+    "type": "mqtt in",
+    "z": "tab_bme280_owm_d2",
+    "name": "STM32 BME280 MQTT",
+    "topic": "college/weather/bme280",
+    "qos": "0",
+    "datatype": "auto-detect",
+    "broker": "mqtt_broker_emqx",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 160,
+    "y": 140,
+    "wires": [
+      [
+        "json_sensor",
+        "dbg_sensor_raw"
+      ]
+    ]
+  },
+  {
+    "id": "dbg_sensor_raw",
+    "type": "debug",
+    "z": "tab_bme280_owm_d2",
+    "name": "Sensor MQTT Raw",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 410,
+    "y": 80,
+    "wires": []
+  },
+  {
+    "id": "json_sensor",
+    "type": "json",
+    "z": "tab_bme280_owm_d2",
+    "name": "Parse Sensor JSON",
+    "property": "payload",
+    "action": "",
+    "pretty": false,
+    "x": 420,
+    "y": 140,
+    "wires": [
+      [
+        "func_sensor_split",
+        "func_cricket_insights"
+      ]
+    ]
+  },
+  {
+    "id": "func_sensor_split",
+    "type": "function",
+    "z": "tab_bme280_owm_d2",
+    "name": "Extract Sensor Readings",
+    "func": "var data = msg.payload;\nif (typeof data === 'string') {\n    try { data = JSON.parse(data); } catch(e) { return null; }\n}\nif (!data) return null;\n\nvar t = parseFloat(data.temperature !== undefined ? data.temperature : 0);\nvar p = parseFloat(data.pressure !== undefined ? data.pressure : 0);\nvar h = parseFloat(data.humidity !== undefined ? data.humidity : 0);\n\nvar msgT = { payload: Number(t.toFixed(2)), topic: 'Sensor Temperature' };\nvar msgP = { payload: Number(p.toFixed(2)), topic: 'Sensor Pressure' };\nvar msgH = { payload: Number(h.toFixed(2)), topic: 'Sensor Humidity' };\n\nreturn [msgT, msgP, msgH];",
+    "outputs": 3,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 670,
+    "y": 140,
+    "wires": [
+      [
+        "dbg_sensor_t",
+        "gauge_sensor_t",
+        "text_sensor_t"
+      ],
+      [
+        "dbg_sensor_p",
+        "gauge_sensor_p",
+        "text_sensor_p"
+      ],
+      [
+        "dbg_sensor_h",
+        "gauge_sensor_h",
+        "text_sensor_h"
+      ]
+    ]
+  },
+  {
+    "id": "dbg_sensor_t",
+    "type": "debug",
+    "z": "tab_bme280_owm_d2",
+    "name": "Sensor Temp (°C)",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 930,
+    "y": 60,
+    "wires": []
+  },
+  {
+    "id": "gauge_sensor_t",
+    "type": "ui-gauge",
+    "z": "tab_bme280_owm_d2",
+    "name": "Sensor Temp Gauge",
+    "group": "ui_grp_sensor",
+    "order": 1,
+    "width": 6,
+    "height": 4,
+    "gtype": "gauge-half",
+    "title": "College Temperature (Match Monitor)",
+    "units": "°C",
+    "min": 0,
+    "max": 40,
+    "segments": [
+      {
+        "from": 0,
+        "color": "#2196F3"
+      },
+      {
+        "from": 18,
+        "color": "#4CAF50"
+      },
+      {
+        "from": 26.01,
+        "color": "#F44336"
+      }
+    ],
+    "x": 950,
+    "y": 100,
+    "wires": []
+  },
+  {
+    "id": "text_sensor_t",
+    "type": "ui-text",
+    "z": "tab_bme280_owm_d2",
+    "group": "ui_grp_sensor",
+    "order": 2,
+    "width": 6,
+    "height": 1,
+    "name": "Sensor Temp Text",
+    "label": "Sensor Temperature:",
+    "format": "{{msg.payload}} °C",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#000000",
+    "className": "",
+    "x": 940,
+    "y": 140,
+    "wires": []
+  },
+  {
+    "id": "dbg_sensor_p",
+    "type": "debug",
+    "z": "tab_bme280_owm_d2",
+    "name": "Sensor Pressure (hPa)",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 950,
+    "y": 180,
+    "wires": []
+  },
+  {
+    "id": "gauge_sensor_p",
+    "type": "ui-gauge",
+    "z": "tab_bme280_owm_d2",
+    "name": "Sensor Pressure Gauge",
+    "group": "ui_grp_sensor",
+    "order": 3,
+    "width": 6,
+    "height": 4,
+    "gtype": "gauge-half",
+    "title": "Pressure (Sensor)",
+    "units": "hPa",
+    "min": 900,
+    "max": 1100,
+    "segments": [
+      {
+        "from": 900,
+        "color": "#2196F3"
+      },
+      {
+        "from": 1000,
+        "color": "#4CAF50"
+      },
+      {
+        "from": 1030,
+        "color": "#FF9800"
+      }
+    ],
+    "x": 960,
+    "y": 220,
+    "wires": []
+  },
+  {
+    "id": "text_sensor_p",
+    "type": "ui-text",
+    "z": "tab_bme280_owm_d2",
+    "group": "ui_grp_sensor",
+    "order": 4,
+    "width": 6,
+    "height": 1,
+    "name": "Sensor Pressure Text",
+    "label": "Sensor Pressure:",
+    "format": "{{msg.payload}} hPa",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#000000",
+    "className": "",
+    "x": 950,
+    "y": 260,
+    "wires": []
+  },
+  {
+    "id": "dbg_sensor_h",
+    "type": "debug",
+    "z": "tab_bme280_owm_d2",
+    "name": "Sensor Humidity (%)",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 940,
+    "y": 300,
+    "wires": []
+  },
+  {
+    "id": "gauge_sensor_h",
+    "type": "ui-gauge",
+    "z": "tab_bme280_owm_d2",
+    "name": "Sensor Humidity Gauge",
+    "group": "ui_grp_sensor",
+    "order": 5,
+    "width": 6,
+    "height": 4,
+    "gtype": "gauge-half",
+    "title": "Humidity (Sensor)",
+    "units": "%",
+    "min": 0,
+    "max": 100,
+    "segments": [
+      {
+        "from": 0,
+        "color": "#FF9800"
+      },
+      {
+        "from": 30,
+        "color": "#4CAF50"
+      },
+      {
+        "from": 70,
+        "color": "#2196F3"
+      }
+    ],
+    "x": 960,
+    "y": 340,
+    "wires": []
+  },
+  {
+    "id": "text_sensor_h",
+    "type": "ui-text",
+    "z": "tab_bme280_owm_d2",
+    "group": "ui_grp_sensor",
+    "order": 6,
+    "width": 6,
+    "height": 1,
+    "name": "Sensor Humidity Text",
+    "label": "Sensor Humidity:",
+    "format": "{{msg.payload}} %",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#000000",
+    "className": "",
+    "x": 950,
+    "y": 380,
+    "wires": []
+  },
+  {
+    "id": "inject_owm_5s",
+    "type": "inject",
+    "z": "tab_bme280_owm_d2",
+    "name": "Every 5 Seconds",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "5",
+    "crontab": "",
+    "once": true,
+    "onceDelay": 0.5,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 170,
+    "y": 540,
+    "wires": [
+      [
+        "http_req_owm"
+      ]
+    ]
+  },
+  {
+    "id": "http_req_owm",
+    "type": "http request",
+    "z": "tab_bme280_owm_d2",
+    "name": "Fetch Chennai Weather",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "https://api.openweathermap.org/data/2.5/weather?q=Chennai&appid=696a0624c7b07023ac1d7c14c7d11423&units=metric",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 410,
+    "y": 540,
+    "wires": [
+      [
+        "dbg_owm_raw",
+        "func_owm_split",
+        "func_cricket_insights"
+      ]
+    ]
+  },
+  {
+    "id": "dbg_owm_raw",
+    "type": "debug",
+    "z": "tab_bme280_owm_d2",
+    "name": "Chennai API Raw",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 670,
+    "y": 480,
+    "wires": []
+  },
+  {
+    "id": "func_owm_split",
+    "type": "function",
+    "z": "tab_bme280_owm_d2",
+    "name": "Extract Chennai Readings",
+    "func": "var data = msg.payload;\nif (typeof data === 'string') {\n    try { data = JSON.parse(data); } catch(e) { return null; }\n}\nif (!data || !data.main) return null;\n\nvar t = parseFloat(data.main.temp);\nvar p = parseFloat(data.main.pressure);\nvar h = parseFloat(data.main.humidity);\n\nvar msgT = { payload: Number(t.toFixed(2)), topic: 'Chennai Temperature' };\nvar msgP = { payload: Number(p.toFixed(2)), topic: 'Chennai Pressure' };\nvar msgH = { payload: Number(h.toFixed(2)), topic: 'Chennai Humidity' };\n\nreturn [msgT, msgP, msgH];",
+    "outputs": 3,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 680,
+    "y": 540,
+    "wires": [
+      [
+        "dbg_owm_t",
+        "gauge_owm_t",
+        "text_owm_t"
+      ],
+      [
+        "dbg_owm_p",
+        "gauge_owm_p",
+        "text_owm_p"
+      ],
+      [
+        "dbg_owm_h",
+        "gauge_owm_h",
+        "text_owm_h"
+      ]
+    ]
+  },
+  {
+    "id": "dbg_owm_t",
+    "type": "debug",
+    "z": "tab_bme280_owm_d2",
+    "name": "Chennai Temp (°C)",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 930,
+    "y": 480,
+    "wires": []
+  },
+  {
+    "id": "gauge_owm_t",
+    "type": "ui-gauge",
+    "z": "tab_bme280_owm_d2",
+    "name": "Chennai Temp Gauge",
+    "group": "ui_grp_owm",
+    "order": 1,
+    "width": 6,
+    "height": 4,
+    "gtype": "gauge-half",
+    "title": "Temperature (Chennai API)",
+    "units": "°C",
+    "min": 0,
+    "max": 40,
+    "segments": [
+      {
+        "from": 0,
+        "color": "#2196F3"
+      },
+      {
+        "from": 18,
+        "color": "#4CAF50"
+      },
+      {
+        "from": 26.01,
+        "color": "#F44336"
+      }
+    ],
+    "x": 950,
+    "y": 520,
+    "wires": []
+  },
+  {
+    "id": "text_owm_t",
+    "type": "ui-text",
+    "z": "tab_bme280_owm_d2",
+    "group": "ui_grp_owm",
+    "order": 2,
+    "width": 6,
+    "height": 1,
+    "name": "Chennai Temp Text",
+    "label": "Chennai Temperature:",
+    "format": "{{msg.payload}} °C",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#000000",
+    "className": "",
+    "x": 940,
+    "y": 560,
+    "wires": []
+  },
+  {
+    "id": "dbg_owm_p",
+    "type": "debug",
+    "z": "tab_bme280_owm_d2",
+    "name": "Chennai Pressure (hPa)",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 950,
+    "y": 600,
+    "wires": []
+  },
+  {
+    "id": "gauge_owm_p",
+    "type": "ui-gauge",
+    "z": "tab_bme280_owm_d2",
+    "name": "Chennai Pressure Gauge",
+    "group": "ui_grp_owm",
+    "order": 3,
+    "width": 6,
+    "height": 4,
+    "gtype": "gauge-half",
+    "title": "Pressure (Chennai)",
+    "units": "hPa",
+    "min": 900,
+    "max": 1100,
+    "segments": [
+      {
+        "from": 900,
+        "color": "#2196F3"
+      },
+      {
+        "from": 1000,
+        "color": "#4CAF50"
+      },
+      {
+        "from": 1030,
+        "color": "#FF9800"
+      }
+    ],
+    "x": 960,
+    "y": 640,
+    "wires": []
+  },
+  {
+    "id": "text_owm_p",
+    "type": "ui-text",
+    "z": "tab_bme280_owm_d2",
+    "group": "ui_grp_owm",
+    "order": 4,
+    "width": 6,
+    "height": 1,
+    "name": "Chennai Pressure Text",
+    "label": "Chennai Pressure:",
+    "format": "{{msg.payload}} hPa",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#000000",
+    "className": "",
+    "x": 950,
+    "y": 680,
+    "wires": []
+  },
+  {
+    "id": "dbg_owm_h",
+    "type": "debug",
+    "z": "tab_bme280_owm_d2",
+    "name": "Chennai Humidity (%)",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 940,
+    "y": 720,
+    "wires": []
+  },
+  {
+    "id": "gauge_owm_h",
+    "type": "ui-gauge",
+    "z": "tab_bme280_owm_d2",
+    "name": "Chennai Humidity Gauge",
+    "group": "ui_grp_owm",
+    "order": 5,
+    "width": 6,
+    "height": 4,
+    "gtype": "gauge-half",
+    "title": "Humidity (Chennai)",
+    "units": "%",
+    "min": 0,
+    "max": 100,
+    "segments": [
+      {
+        "from": 0,
+        "color": "#FF9800"
+      },
+      {
+        "from": 30,
+        "color": "#4CAF50"
+      },
+      {
+        "from": 70,
+        "color": "#2196F3"
+      }
+    ],
+    "x": 960,
+    "y": 760,
+    "wires": []
+  },
+  {
+    "id": "text_owm_h",
+    "type": "ui-text",
+    "z": "tab_bme280_owm_d2",
+    "group": "ui_grp_owm",
+    "order": 6,
+    "width": 6,
+    "height": 1,
+    "name": "Chennai Humidity Text",
+    "label": "Chennai Humidity:",
+    "format": "{{msg.payload}} %",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#000000",
+    "className": "",
+    "x": 950,
+    "y": 800,
+    "wires": []
+  },
+  {
+    "id": "ui_grp_cricket",
+    "type": "ui-group",
+    "name": "Cricket Match Decision",
+    "page": "ui_page_weather",
+    "width": "12",
+    "height": "1",
+    "order": 3,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "func_cricket_insights",
+    "type": "function",
+    "z": "tab_bme280_owm_d2",
+    "name": "Cricket Conditions & Insights",
+    "func": "// Keep the latest college sensor and Chennai API readings for live comparison.\nvar d=msg.payload;\nif (typeof d === 'string') { try { d=JSON.parse(d); } catch(e) { return null; } }\nif (!d || typeof d !== 'object') return null;\nvar s=flow.get('cricket_sensor') || {};\nvar a=flow.get('cricket_api') || {};\nif (d.main && d.main.temp !== undefined) {\n    a={t:Number(d.main.temp), h:Number(d.main.humidity), p:Number(d.main.pressure)};\n    flow.set('cricket_api',a);\n} else if (d.temperature !== undefined) {\n    s={t:Number(d.temperature), h:Number(d.humidity), p:Number(d.pressure)};\n    flow.set('cricket_sensor',s);\n} else { return null; }\nif (!Number.isFinite(s.t) || !Number.isFinite(a.t)) return null;\nvar t=s.t;\nvar decision, band;\nif (t > 26) {\n    decision='NO — HOT: '+t.toFixed(1)+' °C is above 26 °C. Choose a cooler time under this project rule.';\n    band='HOT (>26 °C) — red zone.';\n} else if (t < 18) {\n    decision='NO — COLD: '+t.toFixed(1)+' °C is below 18 °C. Warm up and reassess before play.';\n    band='COLD (<18 °C) — blue zone.';\n} else {\n    decision='YES — PLAYABLE: '+t.toFixed(1)+' °C is within the normal 18–26 °C range.';\n    band='NORMAL (18–26 °C) — green zone.';\n}\nvar drizzle;\nif (s.h > 65) drizzle='POSSIBLE DRIZZLE: campus humidity is '+s.h.toFixed(1)+'% (above 65%). Check the ground and local weather before play; humidity alone cannot confirm rain.';\nelse drizzle='No humidity-based drizzle alert: campus humidity is '+s.h.toFixed(1)+'% (65% or lower). Still check the ground before play.';\nvar cool;\nif (s.t < 24) cool='COOL-WEATHER ALERT: campus temperature is '+s.t.toFixed(1)+' °C, below 24 °C. It may feel cool; allow time for a warm-up before play.';\nelse cool='No below-24 °C cool-weather alert: campus temperature is '+s.t.toFixed(1)+' °C.';\nvar comparison='Campus vs Chennai: temperature difference '+Math.abs(s.t-a.t).toFixed(1)+' °C.';\ncomparison+=' The match decision uses the college sensor; the API is a city reference.';\nfunction card(text){ return '<div style=\"white-space:normal;overflow-wrap:anywhere;line-height:1.5;font-weight:500\">'+text+'</div>'; }\nreturn [\n {payload:card(decision),topic:'Cricket match decision'},\n {payload:card(band),topic:'Temperature band'},\n {payload:card(comparison),topic:'Campus/API comparison'},\n {payload:card(drizzle),topic:'Humidity/drizzle advisory'},\n {payload:card(cool),topic:'Cool-weather alert'}\n];",
+    "outputs": 5,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 680,
+    "y": 900,
+    "wires": [
+      [
+        "text_cricket_play"
+      ],
+      [
+        "text_cricket_comfort"
+      ],
+      [
+        "text_cricket_compare"
+      ],
+      [
+        "text_drizzle_advisory"
+      ],
+      [
+        "text_cool_advisory"
+      ]
+    ]
+  },
+  {
+    "id": "text_cricket_play",
+    "type": "ui-text",
+    "z": "tab_bme280_owm_d2",
+    "group": "ui_grp_cricket",
+    "order": 1,
+    "width": 12,
+    "height": 2,
+    "name": "Match recommendation",
+    "label": "Match verdict",
+    "format": "{{msg.payload}}",
+    "layout": "col-center",
+    "style": true,
+    "font": "Arial, sans-serif",
+    "fontSize": 16,
+    "color": "#e6edf3",
+    "className": "",
+    "x": 1010,
+    "y": 940,
+    "wires": []
+  },
+  {
+    "id": "text_cricket_comfort",
+    "type": "ui-text",
+    "z": "tab_bme280_owm_d2",
+    "group": "ui_grp_cricket",
+    "order": 2,
+    "width": 12,
+    "height": 2,
+    "name": "Player comfort",
+    "label": "Temperature zone",
+    "format": "{{msg.payload}}",
+    "layout": "col-center",
+    "style": true,
+    "font": "Arial, sans-serif",
+    "fontSize": 16,
+    "color": "#e6edf3",
+    "className": "",
+    "x": 1010,
+    "y": 980,
+    "wires": []
+  },
+  {
+    "id": "text_cricket_compare",
+    "type": "ui-text",
+    "z": "tab_bme280_owm_d2",
+    "group": "ui_grp_cricket",
+    "order": 3,
+    "width": 12,
+    "height": 2,
+    "name": "Campus vs Chennai API",
+    "label": "Campus vs city reference",
+    "format": "{{msg.payload}}",
+    "layout": "col-center",
+    "style": true,
+    "font": "Arial, sans-serif",
+    "fontSize": 16,
+    "color": "#e6edf3",
+    "className": "",
+    "x": 1010,
+    "y": 1020,
+    "wires": []
+  },
+  {
+    "id": "text_drizzle_advisory",
+    "type": "ui-text",
+    "z": "tab_bme280_owm_d2",
+    "group": "ui_grp_cricket",
+    "order": 4,
+    "width": 12,
+    "height": 2,
+    "name": "Humidity / Drizzle Advisory",
+    "label": "Humidity / drizzle advisory",
+    "format": "{{msg.payload}}",
+    "layout": "col-center",
+    "style": true,
+    "font": "Arial, sans-serif",
+    "fontSize": 16,
+    "color": "#e6edf3",
+    "className": "",
+    "x": 1010,
+    "y": 1060,
+    "wires": []
+  },
+  {
+    "id": "text_cool_advisory",
+    "type": "ui-text",
+    "z": "tab_bme280_owm_d2",
+    "group": "ui_grp_cricket",
+    "order": 5,
+    "width": 12,
+    "height": 2,
+    "name": "Cool Weather Advisory",
+    "label": "Cool-weather alert",
+    "format": "{{msg.payload}}",
+    "layout": "col-center",
+    "style": true,
+    "font": "Arial, sans-serif",
+    "fontSize": 16,
+    "color": "#e6edf3",
+    "className": "",
+    "x": 1010,
+    "y": 1120,
+    "wires": []
+  }
+]
