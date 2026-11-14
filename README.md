@@ -1,4 +1,4 @@
-# Foundations of IoT – Lab Submission
+# IoT Lab – Embedded Systems Experiments (8051 and STM32)
 
 **Name:** Venkataprabu V
 **Registration Number:** 25011102114
@@ -13,7 +13,7 @@ The experiments cover two platforms:
 - **8051:** Atmel AT89S52 microcontroller. GPIO, switch polling, keypad, timers and PWM, UART and LCD.
 - **STM32:** STM32F103C8T6 (Cortex-M3) and STM32 Nucleo (Cortex-M4). GPIO, UART, ESP8266 Wi-Fi, HTTP server, BME280 sensor, MQTT with Node-RED, and a final project.
 
-Tools used: Keil µVision, STM32CubeMX, Proteus, Node-RED.
+Tools used: Keil µVision, STM32CubeMX, Node-RED.
 
 *Note: CAT 1 (teardown of a commercial IoT device) is not included because its task sheet was not available.*
 
