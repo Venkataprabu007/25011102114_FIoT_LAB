@@ -58,7 +58,7 @@ The laboratory exercises follow the university's official Hands-on Exercises syl
 | **CAT 10** | **Week 10: STM32 Cortex-M3 + ESP8266 Wi-Fi** | • [CAT 10 Summary](./STM32/CAT10/README.md)<br>• [TASK 10A: Dual-UART Bridge & Modem Bringup](./STM32/CAT10/TASK10A/README.md)<br>• [TASK 10B: Wi-Fi Access Point Scan](./STM32/CAT10/TASK10B/README.md)<br>• [TASK 10C: Wi-Fi Station Association](./STM32/CAT10/TASK10C/README.md) | USART1 (PC) to USART2 (ESP8266), AT command pipeline |
 | **CAT 11** | **Week 11: STM32 Cortex-M3 + ESP8266 HTTP** | • [CAT 11 Summary](./STM32/CAT11/README.md)<br>• [TASK 11A: Standalone Embedded HTTP Server](./STM32/CAT11/TASK11A/README.md) | Multi-connection TCP server (`AT+CIPSERVER`), HTTP parsing |
 | **CAT 12** | **Week 12: STM32 Cortex-M4 GPIO & UI** | • [CAT 12 Summary](./STM32/CAT12/README.md)<br>• [TASK 12A: Nucleo Onboard LED Flasher](./STM32/CAT12/TASK12A/README.md)<br>• [TASK 12B: B1 User Push-Button Polling](./STM32/CAT12/TASK12B/README.md)<br>• [TASK 12C: Multi-Pattern State-Machine LED Controller](./STM32/CAT12/TASK12C/README.md) | STM32F410RB, PA5 User LED, PC13 Blue Push Button, state machine |
-| **CAT 13** | **Week 13: Sensor Interfacing (BME280 I2C)** | • [CAT 13 Summary](./STM32/CAT13/README.md)<br>• [TASK 13A: Sensor Device Identification](./STM32/CAT13/TASK13A/README.md)<br>• [TASK 13B: Calibration Trimming Extraction](./STM32/CAT13/TASK13B/README.md)<br>• [TASK 13C: Continuous Weather Measurement](./STM32/CAT13/TASK13C/README.md) | I2C1 (PB6/PB7 @ 100 kHz), Bosch BME280 API, 64-bit integer compensation |
+| **CAT 13** | **Week 13: Sensor Interfacing (BME280 I2C)** | • [CAT 13 Summary](./STM32/CAT13/README.md)<br>• [TASK 13C: BME280 I2C Sensor & HTTP Server](./STM32/CAT13/TASK13C/README.md) | I2C1 (PB6/PB7 @ 100 kHz), Bosch BME280 API, 64-bit integer compensation, HTTP JSON |
 | **CAT 14** | **Week 14: Sensor MQTT with Node-RED** | • [CAT 14 Summary](./STM32/CAT14/README.md)<br>• [TASK 14: Live Sensor Cloud Telemetry](./STM32/CAT14/TASK14/README.md) | I2C1 + USART1 (ESPLib), MQTT broker (`snu/iot/bme280`), Node-RED |
 | **CAT 15** | **Week 15: Capstone Project Submission** | • [CAT 15 Summary](./STM32/CAT15/README.md)<br>• [TASK 15: Environmental Recommendation Engine](./STM32/CAT15/TASK15/README.md) | STM32F401RE, BME280, ESP8266, Node-RED Industrial HVAC Advisory |
 
@@ -124,8 +124,6 @@ The laboratory exercises follow the university's official Hands-on Exercises syl
     │   └── TASK12C/ (circuit.png, README.md, Core/, Drivers/, MDK-ARM/, TEST1.ioc)
     ├── CAT13/
     │   ├── README.md
-    │   ├── TASK13A/ (circuit.png, README.md, Core/, Drivers/, MDK-ARM/, i2c.ioc, bme280 API)
-    │   ├── TASK13B/ (circuit.png, README.md, Core/, Drivers/, MDK-ARM/, i2c.ioc, bme280 API)
     │   └── TASK13C/ (circuit.png, README.md, Core/, Drivers/, MDK-ARM/, i2c.ioc, bme280 API)
     ├── CAT14/
     │   ├── README.md
